@@ -1,15 +1,25 @@
-import sys, random, argparse
+import argparse
 import numpy as np
 import math
 from PIL import Image
 import os
 
+# the fontAspRatio is  and the cols is the 
+def convertImgToASCII(fileNameOfImg, fontAspRatio=0.43, cols=80, gscale = "@%#*+=-:. ", outName="out"):
+    """
 
-# grayscale level values from:
-# http://paulbourke.net/dataformats/asciiart/
+    grayscale level values from http://paulbourke.net/dataformats/asciiart/
 
-# the fontAspRatio is the aspect ratio of the chosen font (the default value is set to font 'courier') and the cols is the number of columns of the final ascii image
-def convertImgToASCII(fileNameOfImg, fontAspRatio=0.43, cols=80, gscale = "@%#*+=-:. ", outName="out11"):
+    Args:
+        fileNameOfImg (str): the directory of the image to be changed
+        fontAspRatio (float, optional): the aspect ratio of the chosen font. Defaults to 0.43 (font 'courier').
+        cols (int, optional): number of columns of the final ascii image. Defaults to 80.
+        gscale (str, optional): the ASCII characters that are included in the image. Defaults to "@%#*+=-:. ".
+        outName (str, optional): the name of the file which contains the output, do not include an extension. Defaults to "out".
+
+    Returns:
+        str: The original image in ASCII format 
+    """
     # opens the image and converts it to grayscale
     # note: the "L" stands for luminance and iis the 'brightness' of the image
     image = Image.open(fileNameOfImg).convert("L")
@@ -51,36 +61,27 @@ def convertImgToASCII(fileNameOfImg, fontAspRatio=0.43, cols=80, gscale = "@%#*+
             asciiImg[j] += gsval
 
     s = ""
-    if os.path.exists(outName + ".txt"):
-        newName = outName [::-1]
-        version = ""
-        for i in range(len(newName)):
-            if newName[i].isdigit():
-                version = newName[i] + version
-            else:
-                outName = outName[:-i] + str(int(version)+1)
-                break
-        print(outName)
+    outName = createFileName(outName)
 
     f = open(outName + ".txt", 'w')
     for row in asciiImg:
         s = s + row + "\n"
         f.write(row + '\n')
-    print(s)
     f.close()
     return s
 
 
-"""
-Generates a unique file name based on the one provided
-
-Args:
-    fileName (string): the file name (without extension)
-
-Returns:
-    _type_: _description_
-"""
 def createFileName(fileName, ext=".txt"):
+    """
+    Generates a unique file name based on the one provided
+
+    Args:
+        fileName (str): the file name (without extension)
+        ext (str, optional): the extension of the file. Defaults to ".txt".
+
+    Returns:
+        _type_: _description_
+    """
     if os.path.exists(fileName + ext):
         newName = fileName [::-1]
         version = ""
@@ -90,17 +91,24 @@ def createFileName(fileName, ext=".txt"):
                 version = newName[i] + version
             else:
                 version = "0" if version == "" else version
-                print("file = " + fileName)
                 fileName = fileName[:lenOfName-i] + str(int(version)+1)
                 return createFileName(fileName)
     else :
         return fileName
 
+
 def averageBrightness(image):
-    # stores the image as a numpy array
-    # the numpy array is a 2D array with each element of the inner
-    # array being the value of brightness of each pixel
-    im = np.array(image)
+    """
+    Calculates the average brightness of an image
+
+    Args:
+        image (PIL Image): the image to get the average brightness of
+
+    Returns:
+        float: the average brightness of the image
+    """
+
+    im = np.array(image) # stores the image as a numpy array the numpy array is a 2D array with each element of the inner array being the value of brightness of each pixel
 
     width, height = im.shape
 
@@ -115,7 +123,15 @@ if __name__ == '__main__':
     # this has 10 different values for 10 different gray values
     gscale2 = "@%#*+=-:. "
 
-    # img = convertImgToASCII(r"./sample1.jpg",gscale=gscale1, cols=80)
-    print("name = " + createFileName("out"))
+    descStr = "This program will take an image and convert it into ASCII art"
+    parser = argparse.ArgumentParser(description=descStr)
+    parser.add_argument('--image', dest='imgFile', required=False, default=r"./sample1.jpg", help="The directory of the image you wish to convert to ASCII art.")
+    parser.add_argument('--out', dest='outFile', required=False, default="out", help="The name of the file you wish for the output to go to. If a file with this name exists a a number will be added to the end of the name to prevent it from being overwritten. Do not include a file extension.")
+
+    args = parser.parse_args()
+    print(args.imgFile)
+
+    img = convertImgToASCII(args.imgFile,gscale=gscale1, outName=args.outFile)
+    print(img)
 
 

@@ -1,6 +1,5 @@
 import argparse
 import numpy as np
-import math
 from PIL import Image
 import os
 
@@ -117,21 +116,25 @@ def averageBrightness(image):
 
 
 if __name__ == '__main__':
-    # this has 70 different characters for 70 different gray values
-    gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\^`. "
-
     # this has 10 different values for 10 different gray values
-    gscale2 = "@%#*+=-:. "
+    gscale1 = "@%#*+=-:. "
+
+    # this has 70 different characters for 70 different gray values
+    gscale2 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\^`. "
+
+    allScales = [gscale1, gscale2]
 
     descStr = "This program will take an image and convert it into ASCII art"
     parser = argparse.ArgumentParser(description=descStr)
-    parser.add_argument('--image', dest='imgFile', required=False, default=r"./sample1.jpg", help="The directory of the image you wish to convert to ASCII art.")
-    parser.add_argument('--out', dest='outFile', required=False, default="out", help="The name of the file you wish for the output to go to. If a file with this name exists a a number will be added to the end of the name to prevent it from being overwritten. Do not include a file extension.")
+    parser.add_argument("--image", dest="imgFile", required=False, default=r"./sample1.jpg", help="The directory of the image you wish to convert to ASCII art.")
+    parser.add_argument("--out", dest="outFile", required=False, default="out", help="The name of the file you wish for the output to go to. If a file with this name exists a a number will be added to the end of the name to prevent it from being overwritten. Do not include a file extension.")
+    parser.add_argument("--gscale", dest="scale", required=False, default="1", choices=["1","2"], help="Which scale you would like to apply.")
 
     args = parser.parse_args()
-    print(args.imgFile)
+    print(args.scale)
+
+    scale = allScales[int(args.scale) - 1]
+    print(scale)
 
     img = convertImgToASCII(args.imgFile,gscale=gscale1, outName=args.outFile)
     print(img)
-
-

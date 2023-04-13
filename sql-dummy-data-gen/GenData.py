@@ -1,7 +1,10 @@
 import argparse
+import sys
 import random
 from datetime import date, datetime, timedelta
 
+from random_word import RandomWords
+import names
 
 
 def createSql(schema, tableName, total):
@@ -20,11 +23,9 @@ def createSql(schema, tableName, total):
         sql += singleVal 
         sql += ",\n\t\t" if total-1 != i else ""
 
-    print(sql + ";")
+    return sql + ";"
 
 def genVal(row):
-    insertVal = None
-
     if ("valRange" not in row) and (row["dataType"] == "integer" or row["dataType"] == "decimal"):
         min = random.randrange(1,10)
         row["valRange"] = [min, random.randrange(min,min*100)]
@@ -32,14 +33,15 @@ def genVal(row):
     if ("valRange" not in row) and (row["dataType"] == "datetime"):
         row["valRange"] = [getRandDate("2000-12-23", "2008-04-12"),getRandDate("2008-04-14", "2022-04-12")]
 
-    
     if "possibleVals" in row:
         return random.choice(row["possibleVals"])
     elif row["dataType"] == "boolean":
         return random.choice([True, False])
+    elif row["dataType"] == "string":
+        return RandomWords().get_random_word()
+    
     if "valRange" in row:
         if row["dataType"] == "datetime":
-            print(type(row["valRange"][0]))
             return getRandDate(row["valRange"][0], row["valRange"][1])
         elif row["dataType"] == "integer":
             return random.randrange(row["valRange"][0], row["valRange"][1])
@@ -47,8 +49,15 @@ def genVal(row):
             return round(random.uniform(row["valRange"][0], row["valRange"][1]), row["decimalPlace"])
         else: 
             return random.uniform(row["valRange"][0], row["valRange"][1])
+    
+    ## generate random names using the following
 
-    return insertVal
+    # names.get_full_name() # 'Patricia Halford'
+    # names.get_full_name(gender='male') # 'Patrick Keating'
+    # names.get_first_name() # 'Bernard'
+    # names.get_first_name(gender='female') # 'Christina'
+    # names.get_last_name() # 'Szczepanek'
+
 
 
 def getRandDate(startDate, endDate):
@@ -136,9 +145,68 @@ if __name__ == '__main__':
         }
     ]
 
-    # print(genVal(possibleData[0]))
+    possibleData2 = [
+        {
+            "name" : "testStr",
+            "dataType": "string"
+        },
+        {
+            "name": "entry_date",
+            "dataType": "datetime"
+        },
+        {
+            "name": "method",
+            "dataType": "string",
+            "possibleVals": ["SOSPD", "CAPD"]
+        },
+        {
+            "name": "bed_number",
+            "dataType": "integer"
+        }, 
+        {
+            "name": "picu_id",
+            "dataType": "integer",
+            "valRange": [1,23]
+        },
+        {
+            "name": "correct_details",
+            "dataType": "boolean"
+        },
+        {
+            "name": "comfort_recorded",
+            "dataType": "boolean"
+        },
+        {
+            "name": "comfort_above",
+            "dataType": "boolean"
+        },
+        {
+            "name": "all_params_scored",
+            "dataType": "boolean"
+        },
+        {
+            "name": "totalled_correctly",
+            "dataType": "boolean"
+        },
+        {
+            "name": "in_score_range",
+            "dataType": "boolean"
+        },
+        {
+            "name": "observer_name",
+            "dataType": "boolean"
+        }
+    ]
 
-    createSql(possibleData, "compliance_data", 10)
+    testStr = {
+            "name" : "testStr",
+            "dataType": "string"
+        }
+    # print(genVal(testStr))
+
+    print(createSql(possibleData2, "compliance_data", 10))
+
+    # print(readWordlist("wordlist"))
 
     # date_time_str = '2018-09-19'
 

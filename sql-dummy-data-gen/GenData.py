@@ -4,7 +4,7 @@ import random
 from datetime import date, datetime, timedelta
 
 from random_word import RandomWords
-import names
+import names # the '.get_name...()' functions have an optional parameter of 'gender' which either takes  'male' or 'female'
 
 
 def createSql(schema, tableName, total):

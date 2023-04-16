@@ -1,15 +1,34 @@
-import argparse
-import sys
 import random
 from datetime import date, datetime, timedelta
-
+import json
+from pathlib import Path
+import argparse
 
 from faker import Faker
-# from random_word import RandomWords
-# import names # the '.get_name...()' functions have an optional parameter of 'gender' which either takes  'male' or 'female'
 
 
-def createSql(schema, tableName, total, uniquePairs=[]):
+def createSql(schema, tableName, total):
+    """Create SQL statements to populate a table with dummy data.
+
+    Args:
+        schema (list[dict]): A list of dictionaries, where each dictionary represents a column in the table. Each dictionary must contain the following keys:
+            - "name" (str): The name of the column.
+            - "dataType" (str): The data type of the column.
+        tableName (str): The name of the table to insert the data into.
+        total (int): The total number of rows to generate.
+
+    Returns:
+        str: The SQL statement that can be used to populate the table with dummy data.
+
+    Examples:
+        >>> schema = [
+                {"name": "id", "dataType": "integer"},
+                {"name": "name", "dataType": "string"},
+                {"name": "age", "dataType": "integer"}
+            ]
+        >>> createSql(schema, "people", 10)
+        'INSERT INTO people (id, name, age)\n\tVALUES\n\t\t(1,'Sydney Lee',38),\n\t\t(2,'Micheal James',54),\n\t\t(3,'Sophia Brown',20),\n\t\t(4,'Lauren Davis',26),\n\t\t(5,'Edward Collins',49),\n\t\t(6,'Linda Clark',47),\n\t\t(7,'Vicky Green',43),\n\t\t(8,'Marshall Robinson',32),\n\t\t(9,'Andrew Jackson',37),\n\t\t(10,'Dorothy Martinez',60);'
+    """
     fake = Faker("en_GB")
 
     sql = "INSERT INTO " + tableName + " ("
@@ -23,7 +42,7 @@ def createSql(schema, tableName, total, uniquePairs=[]):
         for j in range(len(schema)):
             insertVal =  genVal(schema[j], fake=fake) if "forceVal" not in schema[j] else schema[j]["forceVal"]
         
-            insertVal = insertVal.replace("'", "//'") if type(insertVal) == str else insertVal
+            insertVal = insertVal.replace("'", "''") if type(insertVal) == str else insertVal
             
             singleVal += "'" + insertVal + "'" if type(insertVal) == str else str(insertVal)
             singleVal += "," if len(schema)-1 != j else ")"
@@ -33,6 +52,29 @@ def createSql(schema, tableName, total, uniquePairs=[]):
     return sql + ";"
 
 def genVal(row, fake=Faker("en_GB")):
+    """Generate a random value based on the given configuration.
+
+    Args:
+        row (dict): A dictionary containing the configuration details of the value to be generated.
+            It should contain the following keys:
+            - "name": Name of the field.
+            - "dataType": Type of data to generate.
+            - "unique" (optional): A boolean flag indicating whether the generated value should be unique.
+            - "valRange" (optional): A list containing the minimum and maximum values for the generated value.
+            - "decimalPlace" (optional): An integer specifying the number of decimal places to round the generated value to.
+            - "possibleVals" (optional): A list of possible values to choose from.
+
+        fake (Faker, optional): An instance of the Faker class to use for generating the values. Defaults to Faker("en_GB").
+
+    Returns:
+        A randomly generated value of the specified type.
+
+    Examples:
+        >>> genVal({"name": "forename", "dataType": "string"})
+        'Julia'
+        >>> genVal({"name": "age", "dataType": "integer", "valRange": [18, 65]})
+        34
+    """
     if "unique" in row:
         if row['unique']:
             if row["name"] == "forename":
@@ -55,13 +97,12 @@ def genVal(row, fake=Faker("en_GB")):
     elif row["name"] == "country":
         return fake.country()
 
-    
     if ("valRange" not in row) and (row["dataType"] == "integer" or row["dataType"] == "decimal"):
         min = random.randrange(1,10)
         row["valRange"] = [min, random.randrange(min,min*100)]
 
     if ("valRange" not in row) and (row["dataType"] == "datetime"):
-        row["valRange"] = [getRandDate("2000-12-23", "2008-04-12"),getRandDate("2008-04-14", "2022-04-12")]
+        return str(fake.date_time())
 
     if "possibleVals" in row:
         return random.choice(row["possibleVals"])
@@ -72,40 +113,39 @@ def genVal(row, fake=Faker("en_GB")):
     
     if "valRange" in row:
         if row["dataType"] == "datetime":
-            return str(fake.date_this_century())
+            startDate = datetime.fromisoformat(row["valRange"][0])
+            endDate = datetime.fromisoformat(row["valRange"][1])
+            return str(fake.date_time_between(startDate, endDate))
         elif row["dataType"] == "integer":
             return random.randrange(row["valRange"][0], row["valRange"][1])
         elif "decimalPlace" in row:
             return round(random.uniform(row["valRange"][0], row["valRange"][1]), row["decimalPlace"])
         else: 
             return random.uniform(row["valRange"][0], row["valRange"][1])
-
-
-
-def getRandDate(startDate, endDate):
-    # initializing dates ranges
-    # startDate, test_date2 = date(2015, 6, 3), date(2022, 7, 1)
-
-    #  datetime.fromisoformat supports YYYY-MM-DDTHH:MM:SS but anything after T can be removed
-
-    startObj = datetime.fromisoformat(startDate)
-    endObj = datetime.fromisoformat(endDate)
     
-    # getting days between dates
-    datesBet = endObj - startObj
-    totalDays = datesBet.days
-    
-    # getting random days
-    randay = random.randrange(totalDays)
 
-    # ranSec = random.randrange(totalSecs)
+def generateSqlFiles(directory, outFile="fill-tables.sql"):
+    """Generate SQL files to fill tables with dummy data.
 
-    # ranHrs = random.randrange(totalHrs)
+    Args:
+        directory (str): The directory path containing the JSON files defining the table configurations.
+        outFile (str, optional): The name of the output file to write the SQL statements to. Defaults to "fill-tables.sql".
+    """
+    files = Path(directory).glob("*.json")
+    
+    createSqlFile = open(outFile, "w")
+    createSqlFile.close()
 
-    # ranMins = random.randrange(totalMins)
-    
-    return str(startObj + timedelta(days=randay))
-    
+    for file in files:
+        tableFile = open(file)
+        tableInfo = json.load(tableFile)
+
+        dummyData = open(outFile, "a")
+        dummyData.write(createSql(tableInfo["rows"], tableInfo["tableName"], 20) + "\n\n")
+
+        tableFile.close()
+        dummyData.close()
+
 
 if __name__ == '__main__':
     row = {
@@ -117,190 +157,19 @@ if __name__ == '__main__':
         "isPk": True,
         "unique": True # only applies to strings
     }
-
-    possibleData = [
-        {
-            "name": "entry_date",
-            "dataType": "datetime"
-        },
-        {
-            "name": "method",
-            "dataType": "string",
-            "possibleVals": ["SOSPD", "CAPD"]
-        },
-        {
-            "name": "bed_number",
-            "dataType": "integer"
-        }, 
-        {
-            "name": "picu_id",
-            "dataType": "integer",
-            "valRange": [1,23]
-        },
-        {
-            "name": "correct_details",
-            "dataType": "boolean"
-        },
-        {
-            "name": "comfort_recorded",
-            "dataType": "boolean"
-        },
-        {
-            "name": "comfort_above",
-            "dataType": "boolean"
-        },
-        {
-            "name": "all_params_scored",
-            "dataType": "boolean"
-        },
-        {
-            "name": "totalled_correctly",
-            "dataType": "boolean"
-        },
-        {
-            "name": "in_score_range",
-            "dataType": "boolean"
-        },
-        {
-            "name": "observer_name",
-            "dataType": "boolean"
-        }
-    ]
-
-    possibleData2 = [
-        {
-            "name" : "testStr",
-            "dataType": "string"
-        },
-        {
-            "name": "entry_date",
-            "dataType": "datetime"
-        },
-        {
-            "name": "method",
-            "dataType": "string",
-            "possibleVals": ["SOSPD", "CAPD"]
-        },
-        {
-            "name": "bed_number",
-            "dataType": "integer"
-        }, 
-        {
-            "name": "picu_id",
-            "dataType": "integer",
-            "valRange": [1,23]
-        },
-        {
-            "name": "correct_details",
-            "dataType": "boolean"
-        },
-        {
-            "name": "comfort_recorded",
-            "dataType": "boolean"
-        },
-        {
-            "name": "comfort_above",
-            "dataType": "boolean"
-        },
-        {
-            "name": "all_params_scored",
-            "dataType": "boolean"
-        },
-        {
-            "name": "totalled_correctly",
-            "dataType": "boolean"
-        },
-        {
-            "name": "in_score_range",
-            "dataType": "boolean"
-        },
-        {
-            "name": "observer_name",
-            "dataType": "boolean"
-        }
-    ]
-
-    users = [
-        {
-            "name": "email",
-            "dataType": "string",
-            "unique": True
-        },
-        {
-            "name": "password",
-            "dataType": "string",
-            "forceVal": "$2a$10$QKROIDI35N4hIOQ1qwVwU.25ciIBjum/8mgQNEfzK.fMbMgJhUUUi"
-        },
-        {
-            "name": "forename",
-            "dataType": "string"
-        },
-        {
-            "name": "surname",
-            "dataType": "string"
-        },
-        {
-            "name": "profession",
-            "dataType": "string"
-        },
-        {
-            "name": "country",
-            "dataType": "string"
-        },
-        {
-            "name": "user_role",
-            "dataType": "string",
-            "possibleVals": ["learner", "admin", "field_engineer"]
-        }
-    ]
-
-    courses = [{
-        "name": "course_name",
-        "dataType" : "string",
-        "unique": True
-    }]
-
-    chapters = [
-        {
-            "name": "chapter_name",
-            "dataType" : "string"
-        },
-        {
-            "name":"pass_score",
-            "dataType" : "decimal",
-            "decimalPlace": 2
-        },
-        {
-            "name":"num_pages",
-            "dataType" : "integer"
-        },
-        {
-            "name":"course_id",
-            "dataType" : "integer",
-            "forceVal": 1
-        }
-    ]
     
-    testStr = [{
-            "name" : "testStr",
-            "dataType": "string",
-            "unique":True                
-    }]
-    
-    # print(createSql(testStr, "compliance_data", 10))
+    generateSqlFiles("./schemas/elearning")
 
-    # print(genVal(testStr))
+    # The below code might be useful in generating unique pairs
+    # a, b = [], []
 
-    print(createSql(users, "users", 20) + "\n")
-    print(createSql(courses, "courses", 1) + "\n")
-    print(createSql(chapters, "chapters", 6) + "\n")
+    # for i in range(10):
+    #     a.append(i)
+    #     while True:
+    #         r = random.randint(0, 10)
+    #         if r not in b and r != i:
+    #             b.append(r)
+    #         break
 
-    # print(readWordlist("wordlist"))
-
-    # date_time_str = '2018-09-19'
-
-    # print(getRandDate("2020-12-23", "2022-04-12"))
-
-    # fake= Faker("en_GB")
-
-    # print(fake.words(nb=10, unique=True))
+    # print(len(a))
+    # print(len(b))

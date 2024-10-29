@@ -79,6 +79,7 @@ def crop_square_folder(folder_path, output_dir, out_ext=None):
         crop_random_square(image_path, output_dir, output_ext=out_ext, prefix='')
 
 
+
 if __name__ == '__main__':
     # Example usage
     image_path = './images/AbbeyGardens_EN-GB0442009047_UHD.jpg'

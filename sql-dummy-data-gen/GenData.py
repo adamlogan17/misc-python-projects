@@ -124,11 +124,12 @@ def genVal(row, fake=Faker("en_GB")):
             return random.uniform(row["valRange"][0], row["valRange"][1])
     
 
-def generateSqlFiles(directory, outFile="fill-tables.sql"):
+def generateSqlFiles(directory, numOfRows, outFile="fill-tables.sql"):
     """Generate SQL files to fill tables with dummy data.
 
     Args:
         directory (str): The directory path containing the JSON files defining the table configurations.
+        numOfRows (int): The number of rows that should be generated
         outFile (str, optional): The name of the output file to write the SQL statements to. Defaults to "fill-tables.sql".
     """
     files = Path(directory).glob("*.json")
@@ -141,7 +142,7 @@ def generateSqlFiles(directory, outFile="fill-tables.sql"):
         tableInfo = json.load(tableFile)
 
         dummyData = open(outFile, "a")
-        dummyData.write(createSql(tableInfo["rows"], tableInfo["tableName"], 20) + "\n\n")
+        dummyData.write(createSql(tableInfo["rows"], tableInfo["tableName"], numOfRows) + "\n\n")
 
         tableFile.close()
         dummyData.close()
